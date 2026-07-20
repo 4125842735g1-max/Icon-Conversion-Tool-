@@ -370,8 +370,17 @@ def preview_image_from_source(source: Path) -> Image.Image:
 def load_available_languages() -> dict[str, dict[str, Any]]:
     languages: dict[str, dict[str, Any]] = {}
     for path in sorted(LANG_DIR.glob("*.json")):
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        code = payload["meta"]["code"]
+        try:
+            raw = path.read_text(encoding="utf-8").strip()
+        except OSError:
+            continue
+        if not raw:
+            continue
+        try:
+            payload = json.loads(raw)
+            code = payload["meta"]["code"]
+        except (json.JSONDecodeError, KeyError, TypeError):
+            continue
         languages[code] = payload
     if DEFAULT_LANGUAGE not in languages:
         raise RuntimeError(f"Missing default language file: {DEFAULT_LANGUAGE}")
@@ -486,8 +495,7 @@ class SummaryCard(ttk.Frame):
 class PreviewCard(ttk.Frame):
     def __init__(self, master: tk.Misc) -> None:
         super().__init__(master, style="Panel.TFrame", padding=10)
-        self.configure(width=264, height=132)
-        self.grid_propagate(False)
+        self.configure(width=264)
         row = ttk.Frame(self, style="Panel.TFrame")
         row.grid(row=0, column=0, sticky="w")
         self.title_label = ttk.Label(row, style="Title.TLabel")
